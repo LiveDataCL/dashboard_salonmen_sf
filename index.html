@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saúl Fino | Dashboard Operativo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print { .no-print { display: none; } }
+        body { background-color: #f8f9fa; font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body>
+    <div class="max-w-6xl mx-auto p-4 md:p-8">
+        <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+            <div>
+                <h1 class="text-4xl font-black text-gray-900 tracking-tighter">SAÚL FINO</h1>
+                <p class="text-sm font-medium text-amber-600 tracking-widest uppercase">Centro de Estética Premium</p>
+            </div>
+            <div class="flex gap-2 no-print">
+                <input type="date" id="fecha-filtro" class="border rounded px-3 py-2 text-sm">
+                <button onclick="fetchData()" class="bg-black text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-gray-800 transition">Actualizar</button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <p class="text-xs font-bold text-gray-400 uppercase mb-1">Facturación Total</p>
+                <h2 id="kpi-facturacion" class="text-2xl font-bold text-gray-900">$0</h2>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <p class="text-xs font-bold text-gray-400 uppercase mb-1">Pago Barberos</p>
+                <h2 id="kpi-barberos" class="text-2xl font-bold text-amber-700">$0</h2>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <p class="text-xs font-bold text-gray-400 uppercase mb-1">Gastos</p>
+                <h2 id="kpi-gastos" class="text-2xl font-bold text-red-600">$0</h2>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-black bg-gray-900">
+                <p class="text-xs font-bold text-gray-400 uppercase mb-1">Utilidad Neta</p>
+                <h2 id="kpi-utilidad" class="text-2xl font-bold text-white">$0</h2>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="p-5 border-b border-gray-50 flex justify-between items-center">
+                    <h3 class="font-bold text-gray-800">Últimos Servicios (Feed en vivo)</h3>
+                    <span id="contador-servicios" class="bg-gray-100 text-gray-600 text-xs font-bold px-2.5 py-1 rounded-full">0 servicios</span>
+                </div>
+                <table class="w-full text-left">
+                    <thead class="bg-gray-50 text-gray-400 text-xs uppercase">
+                        <tr>
+                            <th class="p-4">Barbero</th>
+                            <th class="p-4">Servicio</th>
+                            <th class="p-4">Monto</th>
+                            <th class="p-4">Pago</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-ultimos" class="text-sm">
+                        </tbody>
+                </table>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 text-sm">
+                <h3 class="font-bold text-gray-800 mb-4">Producción por Barbero</h3>
+                <div id="lista-barberos" class="space-y-4">
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbxIxb1ljhaTk8EISj4TYyiIZIh2RSf-DBKio-xVTyXXClB4AuRwpJ1T92otmhSeQMdxnw/execv"; // REEMPLAZA ESTO
+
+        async function fetchData() {
+            const fechaSeleccionada = document.getElementById('fecha-filtro').value;
+            // Formatear fecha a DD/MM/YYYY si existe
+            let url = API_URL + "?tipo=resumen";
+            if(fechaSeleccionada) {
+                const [y, m, d] = fechaSeleccionada.split('-');
+                url += `&fecha=${d}/${m}/${y}`;
+            }
+
+            try {
+                const response = await fetch(url);
+                const result = await response.json();
+                if(result.ok) renderDashboard(result.data);
+            } catch (e) { console.error("Error:", e); }
+        }
+
+        function renderDashboard(data) {
+            // Actualizar KPIs
+            document.getElementById('kpi-facturacion').innerText = `$${data.facturacion.toLocaleString('es-CL')}`;
+            document.getElementById('kpi-barberos').innerText = `$${data.pagoBarberos.toLocaleString('es-CL')}`;
+            document.getElementById('kpi-gastos').innerText = `$${data.gastos.toLocaleString('es-CL')}`;
+            document.getElementById('kpi-utilidad').innerText = `$${data.utilidad.toLocaleString('es-CL')}`;
+            document.getElementById('contador-servicios').innerText = `${data.servicios} servicios`;
+
+            // Render Tabla Últimos
+            const tabla = document.getElementById('tabla-ultimos');
+            tabla.innerHTML = data.ultimosRegs.map(r => `
+                <tr class="border-b border-gray-50 hover:bg-gray-50 transition">
+                    <td class="p-4 font-bold text-gray-800">${r.barbero}</td>
+                    <td class="p-4 text-gray-500">${r.servicio}</td>
+                    <td class="p-4 font-mono font-bold">$${Number(r.precio).toLocaleString('es-CL')}</td>
+                    <td class="p-4"><span class="text-[10px] bg-gray-100 px-2 py-1 rounded font-black uppercase">${r.pago}</span></td>
+                </tr>
+            `).join('');
+
+            // Render Lista Barberos
+            const listaB = document.getElementById('lista-barberos');
+            listaB.innerHTML = Object.entries(data.porBarbero).map(([name, b]) => `
+                <div class="flex justify-between items-center border-b border-gray-50 pb-2">
+                    <div>
+                        <p class="font-bold text-gray-800">${name}</p>
+                        <p class="text-[10px] text-gray-400">${b.cnt} servicios realizados</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-mono font-bold text-black">$${b.tot.toLocaleString('es-CL')}</p>
+                        <p class="text-[10px] text-amber-600">Comisión: $${b.bb.toLocaleString('es-CL')}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Carga inicial
+        fetchData();
+    </script>
+</body>
+</html>
